@@ -1,0 +1,36 @@
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 120
+extend-include = ["*.ipynb"]
+lint.select = ["ALL"]
+lint.ignore = [
+    "D100",   # ignore missing docs
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+
+    "D203",    #Docstring standards for datascience
+    "D212",
+
+    "T201",
+    "T203",
+    
+    "COM812",
+    "ISC001",
+
+    "RET504" #Disables unessecary assignement before return
+]
+show-fixes = true
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.mypy]
+strict = true
