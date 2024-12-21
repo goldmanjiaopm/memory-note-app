@@ -249,8 +249,6 @@ Copy code
 
 **Backend (Python):**
 
-graphql
-
 backend/
     app/
         main.py              # FastAPI entry point
