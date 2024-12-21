@@ -1,5 +1,7 @@
 import asyncio
 from typing import AsyncGenerator
+import os
+from pathlib import Path
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -7,8 +9,12 @@ from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
 
-# Use SQLite in memory for testing with proper directory structure
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Create a test data directory
+TEST_DIR = Path(__file__).parent / "test_data"
+TEST_DIR.mkdir(exist_ok=True)
+
+# Use SQLite in test directory
+TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DIR}/test.db"
 
 
 @pytest.fixture(scope="session")
@@ -33,6 +39,12 @@ async def engine():
         await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
+
+    # Clean up test database file
+    try:
+        os.remove(TEST_DIR / "test.db")
+    except:
+        pass
 
 
 @pytest.fixture

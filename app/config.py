@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
+from functools import lru_cache
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
@@ -39,7 +40,15 @@ class Settings(BaseSettings):
         """Pydantic config."""
 
         env_file = ".env"
+        extra = "allow"  # Allow extra fields from environment
 
 
-# Create global settings object
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    """
+    Get cached settings instance.
+
+    Returns:
+        Settings: Application settings instance
+    """
+    return Settings()

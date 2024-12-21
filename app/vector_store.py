@@ -50,7 +50,29 @@ class VectorStore:
         self.store.persist()
 
     async def reset(self) -> None:
-        """Reset the vector store by removing all documents."""
-        if self.store._collection is not None:
-            self.store._collection.delete(where={"note_id": {"$exists": True}})
-            self.store.persist()
+        """Reset the vector store by recreating the collection."""
+        self.store = Chroma(
+            collection_name="notes",
+            embedding_function=self.embeddings,
+            persist_directory=str(settings.VECTOR_STORE_DIR),
+        )
+        self.store.persist()
+
+    async def get_note(self, note_id: UUID) -> dict | None:
+        """
+        Get a note by ID from vector store.
+
+        Args:
+            note_id: ID of note to get
+
+        Returns:
+            dict | None: Note data if found, None otherwise
+        """
+        try:
+            results = self.store.get(ids=[str(note_id)])
+            if not results or not results["documents"]:
+                return None
+
+            return {"content": results["documents"][0], "metadata": results["metadatas"][0]}
+        except:
+            return None

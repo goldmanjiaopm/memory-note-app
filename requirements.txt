@@ -29,3 +29,4 @@ httpx>=0.26.0           # HTTP client for testing
 ruff>=0.2.1             # Linting
 black>=24.1.1           # Code formatting
 mypy>=1.8.0             # Type checking
+pydantic-settings>=2.0.0
