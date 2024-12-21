@@ -48,3 +48,9 @@ class VectorStore:
         """Delete a note from the vector store."""
         self.store.delete(ids=[str(note_id)])
         self.store.persist()
+
+    async def reset(self) -> None:
+        """Reset the vector store by removing all documents."""
+        if self.store._collection is not None:
+            self.store._collection.delete(where={"note_id": {"$exists": True}})
+            self.store.persist()
