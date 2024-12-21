@@ -39,7 +39,7 @@ class VectorStore:
             {
                 "content": doc.page_content,
                 "metadata": doc.metadata,
-                "score": round((1 - score), 3),  # Convert distance to similarity score
+                "score": round((score), 4),
             }
             for doc, score in results
         ]
