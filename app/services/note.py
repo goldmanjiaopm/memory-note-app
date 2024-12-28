@@ -1,13 +1,17 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
+from openai import AsyncOpenAI
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import get_settings
 from ..models import Note
 from ..retrievers.base import BaseRetriever
 from ..retrievers.combined import CombinedRetriever
 from ..schemas import NoteCreate
+
+settings = get_settings()
 
 
 class NoteService:
@@ -16,6 +20,7 @@ class NoteService:
     def __init__(self, retriever: Optional[BaseRetriever] = None):
         """Initialize with retriever instance."""
         self.retriever = retriever or CombinedRetriever()
+        self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def create_note(self, db: AsyncSession, note_data: NoteCreate) -> Note:
         """
@@ -101,3 +106,53 @@ class NoteService:
         await self.retriever.delete_document(str(note_id))
 
         return True
+
+    async def generate_response(self, query: str, k: int = 4) -> Dict[str, str]:
+        """
+        Generate a response to a query using relevant notes as context.
+
+        Args:
+            query: User's query
+            k: Number of relevant notes to use as context
+
+        Returns:
+            Dict[str, str]: Dictionary containing the response and sources
+        """
+        # Get relevant notes
+        search_results = await self.search_notes(query, k)
+
+        if not search_results:
+            return {"response": "I couldn't find any relevant information to answer your query.", "sources": []}
+
+        # Prepare context from search results
+        contexts = []
+        sources = []
+        for result in search_results:
+            contexts.append(result["content"])
+            sources.append({"content": result["content"], "metadata": result["metadata"]})
+
+        # Create prompt with context
+        prompt = f"""Based on the following contexts, answer the query. If the contexts don't contain relevant information, say so.
+
+Contexts:
+{chr(10).join(f'- {context}' for context in contexts)}
+
+Query: {query}
+
+Please provide a clear and concise response using only the information from the given contexts."""
+
+        # Generate response using OpenAI
+        response = await self.openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that answers questions based on the given context.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+            max_tokens=500,
+        )
+
+        return {"response": response.choices[0].message.content, "sources": sources}

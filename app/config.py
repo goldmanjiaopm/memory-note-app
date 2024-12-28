@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = DATABASE_URL
     VECTOR_STORE_DIR: Path = VECTOR_STORE_DIR
+    OPENAI_API_KEY: Optional[str] = None
 
     class Config:
         """Pydantic config."""

@@ -131,3 +131,23 @@ async def search_notes(
         List[dict]: Similar notes with combined scores
     """
     return await note_service.search_notes(query, k)
+
+
+@router.post("/generate")
+async def generate_response(
+    query: str,
+    k: int = 4,
+    note_service: NoteService = Depends(get_note_service),
+) -> dict:
+    """
+    Generate a response to a query using relevant notes as context.
+
+    Args:
+        query: User's query
+        k: Number of relevant notes to use as context
+        note_service: Note service instance
+
+    Returns:
+        dict: Generated response and source contexts
+    """
+    return await note_service.generate_response(query, k)
