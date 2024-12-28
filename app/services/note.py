@@ -5,20 +5,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Note
+from ..retrievers.base import BaseRetriever
+from ..retrievers.combined import CombinedRetriever
 from ..schemas import NoteCreate
-from ..vector_store import VectorStore
 
 
 class NoteService:
     """Service for managing notes with vector search capabilities."""
 
-    def __init__(self, vector_store: VectorStore):
-        """Initialize with vector store instance."""
-        self.vector_store = vector_store
+    def __init__(self, retriever: Optional[BaseRetriever] = None):
+        """Initialize with retriever instance."""
+        self.retriever = retriever or CombinedRetriever(vector_weight=0.7)
 
     async def create_note(self, db: AsyncSession, note_data: NoteCreate) -> Note:
         """
-        Create a new note and add it to vector store.
+        Create a new note and add it to retrievers.
 
         Args:
             db: Database session
@@ -33,8 +34,9 @@ class NoteService:
         await db.commit()
         await db.refresh(note)
 
-        # Add to vector store
-        await self.vector_store.add_note(note)
+        # Add to retrievers
+        metadata = {"note_id": str(note.id), "title": note.title}
+        await self.retriever.add_document(note.content, metadata)
 
         return note
 
@@ -66,16 +68,16 @@ class NoteService:
 
     async def search_notes(self, query: str, k: int = 4) -> List[dict]:
         """
-        Search notes by semantic similarity.
+        Search notes by semantic similarity and BM25.
 
         Args:
             query: Search query
             k: Number of results to return
 
         Returns:
-            List[dict]: Similar notes with scores
+            List[dict]: Similar notes with combined scores
         """
-        return await self.vector_store.search_similar(query, k)
+        return await self.retriever.search(query, k)
 
     async def delete_note(self, db: AsyncSession, note_id: UUID) -> bool:
         """
@@ -95,7 +97,7 @@ class NoteService:
         await db.delete(note)
         await db.commit()
 
-        # Remove from vector store
-        await self.vector_store.delete_note(note_id)
+        # Remove from retrievers
+        await self.retriever.delete_document(str(note_id))
 
         return True

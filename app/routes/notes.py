@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import async_session
 from ..schemas import NoteCreate, NoteRead
 from ..services.note import NoteService
-from ..vector_store import VectorStore
+from ..retrievers.combined import CombinedRetriever
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
@@ -20,7 +20,7 @@ async def get_db():
 
 async def get_note_service():
     """Get note service instance."""
-    return NoteService(VectorStore())
+    return NoteService(CombinedRetriever(vector_weight=0.7))
 
 
 @router.post("/", response_model=NoteRead)
@@ -116,11 +116,11 @@ async def delete_note(
 @router.post("/search")
 async def search_notes(
     query: str,
-    k: int = 2,
+    k: int = 4,
     note_service: NoteService = Depends(get_note_service),
 ) -> List[dict]:
     """
-    Search notes by semantic similarity.
+    Search notes by semantic similarity and BM25.
 
     Args:
         query: Search query
@@ -128,6 +128,6 @@ async def search_notes(
         note_service: Note service instance
 
     Returns:
-        List[dict]: Similar notes with scores
+        List[dict]: Similar notes with combined scores
     """
     return await note_service.search_notes(query, k)
