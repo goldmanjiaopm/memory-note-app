@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..config.ai_config import get_ai_config
+from ..config.prompts import RELEVANCY_CHECK_PROMPT, REGENERATION_PROMPT
 from ..models import Note
 from ..retrievers.base import BaseRetriever
 from ..retrievers.combined import CombinedRetriever
@@ -110,6 +111,67 @@ class NoteService:
 
         return True
 
+    async def _check_response_quality(self, query: str, contexts: List[str], response: str) -> bool:
+        """
+        Check if response is relevant and not hallucinated.
+
+        Args:
+            query: Original query
+            contexts: Context documents used
+            response: Generated response to check
+
+        Returns:
+            bool: True if response is good, False if it needs regeneration
+        """
+        # Format the relevancy check prompt
+        check_prompt = RELEVANCY_CHECK_PROMPT.format(
+            query=query, contexts="\n".join(f"- {context}" for context in contexts), response=response
+        )
+
+        # Get the quality check response
+        check_response = await self.openai_client.chat.completions.create(
+            model=ai_config.openai.model,
+            messages=[
+                {"role": "system", "content": "You are a strict fact-checker. Only respond with 'yes' or 'no'."},
+                {"role": "user", "content": check_prompt},
+            ],
+            temperature=0,  # Use 0 for consistent checking
+            max_tokens=1,
+        )
+
+        return check_response.choices[0].message.content.lower().strip() == "yes"
+
+    async def _regenerate_response(self, query: str, contexts: List[str], issue_type: str) -> str:
+        """
+        Regenerate a response that was found to be problematic.
+
+        Args:
+            query: Original query
+            contexts: Context documents
+            issue_type: Description of the issue ("hallucinated" or "not relevant")
+
+        Returns:
+            str: Regenerated response
+        """
+        regenerate_prompt = REGENERATION_PROMPT.format(
+            issue_type=issue_type, contexts="\n".join(f"- {context}" for context in contexts), query=query
+        )
+
+        response = await self.openai_client.chat.completions.create(
+            model=ai_config.openai.model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that answers questions strictly based on the given context.",
+                },
+                {"role": "user", "content": regenerate_prompt},
+            ],
+            temperature=ai_config.openai.temperature / 2,  # Lower temperature for more focused response
+            max_tokens=ai_config.openai.max_tokens,
+        )
+
+        return response.choices[0].message.content
+
     async def generate_response(self, query: str, k: int = None) -> Dict[str, str]:
         """
         Generate a response to a query using relevant notes as context.
@@ -143,16 +205,16 @@ class NoteService:
             }
 
         # Create prompt with context
-        prompt = f"""Based on the following contexts, answer the query. If the contexts don't contain relevant information, say so.
+        prompt = f"""Based on the following contexts, answer the query. If the contexts don't contain relevant information answer to the best of your ability but tell the user that you couldn't find relevant information.
 
 Contexts:
 {chr(10).join(f'- {context}' for context in contexts)}
 
 Query: {query}
 
-Please provide a clear and concise response using only the information from the given contexts."""
+Please provide a clear and concise response using the information from the given contexts and if you don't have relevant information answer to the best of your ability but tell the user that you couldn't find relevant information."""
 
-        # Generate response using OpenAI
+        # Generate initial response
         response = await self.openai_client.chat.completions.create(
             model=ai_config.openai.model,
             messages=[
@@ -166,4 +228,19 @@ Please provide a clear and concise response using only the information from the 
             max_tokens=ai_config.openai.max_tokens,
         )
 
-        return {"response": response.choices[0].message.content, "sources": sources}
+        initial_response = response.choices[0].message.content
+
+        # # Check response quality - rerank rag
+        # is_good_response = await self._check_response_quality(query, contexts, initial_response)
+        # for _ in range(5):
+        #     if not is_good_response:
+        #         # Regenerate response with stricter constraints
+        #         final_response = await self._regenerate_response(
+        #             query, contexts, "hallucinated or not fully relevant to the query"
+        #         )
+        #         is_good_response = await self._check_response_quality(query, contexts, final_response)
+        #     else:
+        #         final_response = initial_response
+        #         break
+
+        return {"response": initial_response, "sources": sources}
