@@ -15,7 +15,7 @@ class NoteService:
 
     def __init__(self, retriever: Optional[BaseRetriever] = None):
         """Initialize with retriever instance."""
-        self.retriever = retriever or CombinedRetriever(vector_weight=0.7)
+        self.retriever = retriever or CombinedRetriever()
 
     async def create_note(self, db: AsyncSession, note_data: NoteCreate) -> Note:
         """

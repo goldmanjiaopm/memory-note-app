@@ -48,7 +48,7 @@ async def bm25_retriever():
 @pytest.fixture
 async def combined_retriever(vector_retriever, bm25_retriever):
     """Create a combined retriever for testing."""
-    retriever = CombinedRetriever(vector_weight=0.7)
+    retriever = CombinedRetriever()
     retriever.vector_retriever = vector_retriever
     retriever.bm25_retriever = bm25_retriever
     return retriever

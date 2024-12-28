@@ -20,7 +20,7 @@ async def get_db():
 
 async def get_note_service():
     """Get note service instance."""
-    return NoteService(CombinedRetriever(vector_weight=0.7))
+    return NoteService(CombinedRetriever())
 
 
 @router.post("/", response_model=NoteRead)
