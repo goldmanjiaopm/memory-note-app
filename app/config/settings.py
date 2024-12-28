@@ -1,7 +1,8 @@
+"""Application settings."""
+
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
@@ -10,7 +11,7 @@ from pydantic_settings import BaseSettings
 load_dotenv()
 
 # Base directories
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
@@ -35,7 +36,7 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = DATABASE_URL
     VECTOR_STORE_DIR: Path = VECTOR_STORE_DIR
-    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_API_KEY: str | None = None
 
     class Config:
         """Pydantic config."""

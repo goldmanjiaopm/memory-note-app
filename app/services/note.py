@@ -6,12 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
+from ..config.ai_config import get_ai_config
 from ..models import Note
 from ..retrievers.base import BaseRetriever
 from ..retrievers.combined import CombinedRetriever
 from ..schemas import NoteCreate
 
 settings = get_settings()
+ai_config = get_ai_config()
 
 
 class NoteService:
@@ -19,7 +21,7 @@ class NoteService:
 
     def __init__(self, retriever: Optional[BaseRetriever] = None):
         """Initialize with retriever instance."""
-        self.retriever = retriever or CombinedRetriever()
+        self.retriever = retriever or CombinedRetriever(k0=ai_config.retriever.rrf_k0)
         self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def create_note(self, db: AsyncSession, note_data: NoteCreate) -> Note:
@@ -71,17 +73,18 @@ class NoteService:
         """
         return await db.get(Note, note_id)
 
-    async def search_notes(self, query: str, k: int = 4) -> List[dict]:
+    async def search_notes(self, query: str, k: int = None) -> List[dict]:
         """
         Search notes by semantic similarity and BM25.
 
         Args:
             query: Search query
-            k: Number of results to return
+            k: Number of results to return (defaults to config value)
 
         Returns:
             List[dict]: Similar notes with combined scores
         """
+        k = k or ai_config.retriever.top_k
         return await self.retriever.search(query, k)
 
     async def delete_note(self, db: AsyncSession, note_id: UUID) -> bool:
@@ -107,18 +110,19 @@ class NoteService:
 
         return True
 
-    async def generate_response(self, query: str, k: int = 4) -> Dict[str, str]:
+    async def generate_response(self, query: str, k: int = None) -> Dict[str, str]:
         """
         Generate a response to a query using relevant notes as context.
 
         Args:
             query: User's query
-            k: Number of relevant notes to use as context
+            k: Number of relevant notes to use as context (defaults to config value)
 
         Returns:
             Dict[str, str]: Dictionary containing the response and sources
         """
         # Get relevant notes
+        k = k or ai_config.retriever.top_k
         search_results = await self.search_notes(query, k)
 
         if not search_results:
@@ -128,8 +132,15 @@ class NoteService:
         contexts = []
         sources = []
         for result in search_results:
-            contexts.append(result["content"])
-            sources.append({"content": result["content"], "metadata": result["metadata"]})
+            if result["score"] >= ai_config.retriever.min_score_threshold:
+                contexts.append(result["content"])
+                sources.append({"content": result["content"], "metadata": result["metadata"]})
+
+        if not contexts:
+            return {
+                "response": "I couldn't find any sufficiently relevant information to answer your query.",
+                "sources": [],
+            }
 
         # Create prompt with context
         prompt = f"""Based on the following contexts, answer the query. If the contexts don't contain relevant information, say so.
@@ -143,16 +154,16 @@ Please provide a clear and concise response using only the information from the 
 
         # Generate response using OpenAI
         response = await self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=ai_config.openai.model,
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a helpful assistant that answers questions based on the given context.",
+                    "content": ai_config.openai.system_prompt,
                 },
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.7,
-            max_tokens=500,
+            temperature=ai_config.openai.temperature,
+            max_tokens=ai_config.openai.max_tokens,
         )
 
         return {"response": response.choices[0].message.content, "sources": sources}

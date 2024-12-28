@@ -1,7 +1,11 @@
 from typing import Dict, List
 import numpy as np
 from rank_bm25 import BM25Okapi
+
+from ..config.ai_config import get_ai_config
 from .base import BaseRetriever, SearchResult
+
+ai_config = get_ai_config()
 
 
 class BM25Retriever(BaseRetriever):
@@ -14,20 +18,20 @@ class BM25Retriever(BaseRetriever):
         self.bm25: BM25Okapi | None = None
 
     def _tokenize(self, text: str) -> List[str]:
-        """Tokenize text into words."""
-        return text.lower().split()
+        """
+        Tokenize text for BM25.
 
-    def _update_index(self) -> None:
-        """Update BM25 index."""
-        if self.documents:  # Only create index if there are documents
-            tokenized_documents = [self._tokenize(doc) for doc in self.documents]
-            self.bm25 = BM25Okapi(tokenized_documents)
-        else:
-            self.bm25 = None
+        Args:
+            text: Text to tokenize
+
+        Returns:
+            List[str]: List of tokens
+        """
+        return text.lower().split()
 
     def _normalize_scores(self, scores: np.ndarray) -> np.ndarray:
         """
-        Normalize scores to [0, 1] range.
+        Normalize BM25 scores to [0, 1] range.
 
         Args:
             scores: Raw BM25 scores
@@ -35,13 +39,17 @@ class BM25Retriever(BaseRetriever):
         Returns:
             np.ndarray: Normalized scores
         """
-        if len(scores) == 0:
+        if len(scores) == 0 or np.all(scores == 0):
             return scores
+        return scores / np.max(scores)
 
-        max_score = np.max(scores)
-        if max_score > 0:
-            return scores / max_score
-        return scores
+    def _update_index(self) -> None:
+        """Update BM25 index with current documents."""
+        if self.documents:
+            tokenized_docs = [self._tokenize(doc) for doc in self.documents]
+            self.bm25 = BM25Okapi(tokenized_docs)
+        else:
+            self.bm25 = None
 
     async def add_document(self, content: str, metadata: dict) -> None:
         """
@@ -55,17 +63,19 @@ class BM25Retriever(BaseRetriever):
         self.metadata.append(metadata)
         self._update_index()
 
-    async def search(self, query: str, k: int = 4) -> List[SearchResult]:
+    async def search(self, query: str, k: int = None) -> List[SearchResult]:
         """
         Search for documents using BM25.
 
         Args:
             query: Search query
-            k: Number of results to return
+            k: Number of results to return (defaults to config value)
 
         Returns:
             List[SearchResult]: Search results with scores
         """
+        k = k or ai_config.retriever.top_k
+
         if not self.bm25 or not self.documents:
             return []
 
@@ -78,7 +88,7 @@ class BM25Retriever(BaseRetriever):
 
         results: List[SearchResult] = []
         for idx in top_k_indices:
-            if scores[idx] > 0:  # Only include results with non-zero scores
+            if scores[idx] >= ai_config.retriever.min_score_threshold:
                 results.append(
                     {"content": self.documents[idx], "metadata": self.metadata[idx], "score": float(scores[idx])}
                 )
