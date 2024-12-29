@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import async_session
+from ..retrievers.combined import CombinedRetriever
 from ..schemas import NoteCreate, NoteRead
 from ..services.note import NoteService
-from ..retrievers.combined import CombinedRetriever
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
