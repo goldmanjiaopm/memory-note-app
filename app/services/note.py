@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..config.ai_config import get_ai_config
-from ..config.prompts import RELEVANCY_CHECK_PROMPT, REGENERATION_PROMPT
+from ..config.prompts import REGENERATION_PROMPT, RELEVANCY_CHECK_PROMPT
 from ..models import Note
 from ..retrievers.base import BaseRetriever
 from ..retrievers.combined import CombinedRetriever
