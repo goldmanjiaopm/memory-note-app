@@ -2,6 +2,10 @@
 
 A smart note-taking application that uses AI to help you find and connect your notes. Built with FastAPI, SQLAlchemy, ChromaDB, and React.
 
+### AI-Powered Question Answering
+![Question Answering Demo](docs/images/qa-demo.gif)
+*Ask questions about your notes and get accurate answers with source citations*
+
 ## Features
 
 - 📝 Create and manage notes with rich text
