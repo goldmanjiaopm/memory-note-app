@@ -39,11 +39,7 @@ git clone https://github.com/yourusername/memory-note-app.git
 cd memory-note-app
 ```
 
-2. Create `.env` file:
-```bash
-cp .env.template .env
-# Edit .env and add your OpenAI API key
-```
+2. Create `.env` file
 
 3. Start the application:
 ```bash
@@ -81,6 +77,23 @@ npm run dev
 Once the backend is running, visit:
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
+
+## Environment Variables
+
+### Required Variables
+- `OPENAI_API_KEY`: Your OpenAI API key
+
+### Optional Variables
+- `ENVIRONMENT`: `development` or `production` (default: `development`)
+- `DEBUG`: Enable debug mode (default: `true`)
+- `DATABASE_URL`: SQLite database URL (default: `sqlite+aiosqlite:///./data/notes.db`)
+- `VECTOR_STORE_PATH`: ChromaDB storage location (default: `/app/data/vector_store`)
+- `BM25_WEIGHT`: Weight for BM25 search (default: `0.3`)
+- `VECTOR_WEIGHT`: Weight for vector search (default: `0.7`)
+- `USE_RRF`: Use Reciprocal Rank Fusion instead of weighted average (default: `true`)
+- `OPENAI_MODEL`: OpenAI model to use 
+- `MAX_TOKENS`: Maximum tokens for OpenAI responses (default: `500`)
+- `TEMPERATURE`: OpenAI temperature setting (default: `0.7`)
 
 ## Project Structure
 ```
