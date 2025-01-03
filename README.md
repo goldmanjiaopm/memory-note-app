@@ -109,7 +109,10 @@ memory-note-app/
 │   ├── routes/            # API routes
 │   ├── schemas/           # Pydantic schemas
 │   └── services/          # Business logic
+├── docker/                # Docker configuration
+│   └── backend/          # Backend Docker files
 ├── frontend/              # React frontend
+│   └── Dockerfile        # Frontend Docker configuration
 ├── tests/                 # Test suite
 ├── docker-compose.yml     # Docker compose config
 └── requirements.txt       # Python dependencies
