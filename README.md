@@ -1,6 +1,6 @@
 # Memory Note App
 
-A smart note-taking application that uses AI to help you find and connect your notes. Built with FastAPI, SQLAlchemy, ChromaDB, and React.
+A smart note-taking application that uses RAG to help you find and connect your notes. Built with FastAPI, SQLAlchemy, ChromaDB, and React.
 
 ### RAG Question Answering
 ![Question Answering Demo](docs/images/qa-demo.gif)
@@ -8,10 +8,8 @@ A smart note-taking application that uses AI to help you find and connect your n
 
 ## Features
 
-- 📝 Create and manage notes with rich text
-- 🔍 Smart search using hybrid retrieval (BM25 + Vector Search)
+- 📝 Create and manage notes
 - 🤖 AI-powered question answering using your notes as context
-- 🎯 Reciprocal Rank Fusion (RRF) for optimal search results
 - 🔄 Real-time synchronization between database and vector store
 
 ## Tech Stack
