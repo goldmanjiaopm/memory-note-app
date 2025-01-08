@@ -9,7 +9,7 @@ A smart note-taking application that uses RAG to help you find and connect your 
 ## Features
 
 - 📝 Create and manage notes
-- 🤖 AI-powered question answering using your notes as context
+- 🤖 Answering with RAG using your notes as context
 - 🔄 Real-time synchronization between database and vector store
 
 ## Tech Stack
